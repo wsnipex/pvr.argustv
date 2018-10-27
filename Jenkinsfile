@@ -6,7 +6,8 @@ properties([
 	parameters([
 		string(defaultValue: '1', description: 'debian package revision tag', name: 'TAGREV', trim: true),
 		choice(choices: ['all', 'cosmic', 'bionic', 'xenial'], description: 'Ubuntu version to build for', name: 'dists'),
-		choice(choices: ['auto', 'wsnipex-test', 'nightly', 'unstable', 'stable'], description: 'PPA to use', name: 'PPA')
+		choice(choices: ['auto', 'wsnipex-test', 'nightly', 'unstable', 'stable'], description: 'PPA to use', name: 'PPA'),
+		booleanParam(defaultValue: false, description: 'Force upload to PPA', name: 'force_ppa_upload')
 	])
 ])
 
@@ -217,6 +218,11 @@ exit \$PUBLISHED
 					
 					stage("build")
 					{
+						if (params.force_ppa_upload)
+						{
+							sh "rm -f kodi-*.changes kodi-*.build kodi-*.upload"
+						}
+
 						dir("${addon}")
 						{
 							echo "Ubuntu dists enabled: ${dists} - TAGREV: ${params.TAGREV} - PPA: ${params.PPA}"
@@ -225,21 +231,27 @@ exit \$PUBLISHED
 							echo "Detected PackageVersion: ${packageversion}"
 							def changelogin = readFile 'debian/changelog.in'
 							def origtarball = 'kodi-' + addon.replace('.', '-') + "_${packageversion}.orig.tar.gz"
+
 							sh "git archive --format=tar.gz -o ../${origtarball} HEAD"
 
 							for (dist in dists)
 							{
-								echo "building for ${dist}"
+								echo "Building debian-source package for ${dist}"
 								def changelog = changelogin.replace('#PACKAGEVERSION#', packageversion).replace('#TAGREV#', params.TAGREV).replace('#DIST#', dist)
 								writeFile file: "debian/changelog", text: "${changelog}"
 								sh "debuild -S -k'jenkins (jenkins build bot) <jenkins@kodi.tv>'"
 							}
 						}
 					}
-					stage("upload")
+
+					stage("deploy ubuntu-ppa")
 					{
-						def changespattern = 'kodi-' + addon.replace('.', '-') + "_${packageversion}-${params.TAGREV}*_source.changes"
-						sh "dput ${ppa} ${changespattern}"
+						if (env.TAG_NAME != null)
+						{
+							def changespattern = 'kodi-' + addon.replace('.', '-') + "_${packageversion}-${params.TAGREV}*_source.changes"
+							echo "Uploading to launchpad: ${changespattern}"
+							sh "dput ${ppa} ${changespattern}"
+						}
 					}
 				}
   			}
