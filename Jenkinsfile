@@ -210,10 +210,6 @@ exit \$PUBLISHED
 							}
 						}
 					}
-
-					stage("clone")
-					{
-					}
 					
 					stage("build")
 					{
@@ -224,6 +220,8 @@ exit \$PUBLISHED
 							packageversion = getVersion(addonsxml)
 							echo "Detected PackageVersion: ${packageversion}"
 							def changelogin = readFile 'debian/changelog.in'
+							def origtarball = 'kodi-' + addon.replace('.', '-') + "_${packageversion}.orig.tar.gz"
+							sh "git archive --format=tar.gz -o ../${origtarball} HEAD"
 
 							for (dist in dists)
 							{
