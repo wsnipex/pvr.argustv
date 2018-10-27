@@ -50,6 +50,7 @@ def buildPlugin(Map addonParams = [:])
 	for (int i = 0; i < platforms.size(); ++i)
 	{
 		String platform = platforms[i]
+		if (platform == 'ubuntu-ppa') continue
 
 		def category = "binary-addons/${platform}-${version}"
 		if (ThrottleJobProperty.fetchDescriptor().getCategories().every{ c -> c.getCategoryName() !=  category})
@@ -57,7 +58,6 @@ def buildPlugin(Map addonParams = [:])
 			ThrottleJobProperty.fetchDescriptor().getCategories().add(new ThrottleJobProperty.ThrottleCategory(category, 1, 0, null));
 			ThrottleJobProperty.fetchDescriptor().save()
 		}
-/*
 		tasks[platform] = {
 			throttle(["binary-addons/${platform}-${version}"])
 			{
@@ -182,8 +182,7 @@ exit \$PUBLISHED
 				}
 			}
 		}
-*/
-  }
+	}
 
 	tasks["ubuntu-ppa"] = {
 		throttle(["binary-addons/ubuntu-ppa-${version}"])
@@ -192,7 +191,7 @@ exit \$PUBLISHED
 			{
 				ws("workspace/binary-addons/kodi-ubuntu-ppa-${version}")
 				{
-					stage("prepare")
+					stage("clone")
 					{
 						dir("${addon}")
 						{
@@ -212,6 +211,10 @@ exit \$PUBLISHED
 						}
 					}
 
+					stage("clone")
+					{
+					}
+					
 					stage("build")
 					{
 						dir("${addon}")
