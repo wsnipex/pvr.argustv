@@ -1,28 +1,32 @@
 import hudson.plugins.throttleconcurrents.ThrottleJobProperty;
-import java.io.File
-import java.util.regex.Matcher
-
-properties([
-	parameters([
-		string(defaultValue: '1', description: 'debian package revision tag', name: 'TAGREV', trim: true),
-		choice(choices: ['all', 'cosmic', 'bionic', 'xenial'], description: 'Ubuntu version to build for', name: 'dists'),
-		choice(choices: ['auto', 'wsnipex-test', 'nightly', 'unstable', 'stable'], description: 'PPA to use', name: 'PPA'),
-		booleanParam(defaultValue: false, description: 'Force upload to PPA', name: 'force_ppa_upload')
-	])
-])
 
 /**
  * Simple wrapper step for building a plugin
  */
 def buildPlugin(Map addonParams = [:])
 {
+	properties([
+		buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '5')),
+		disableConcurrentBuilds(),
+		disableResume(),
+		durabilityHint('PERFORMANCE_OPTIMIZED'),
+		pipelineTriggers(env.BRANCH_NAME == 'master' ? [cron('@weekly')] : []),
+		[$class: 'RebuildSettings', autoRebuild: false, rebuildDisabled: true],
+		[$class: 'ThrottleJobProperty', categories: [], limitOneJobWithMatchingParams: false, maxConcurrentPerNode: 0, maxConcurrentTotal: 1, paramsToUseForLimit: '', throttleEnabled: true, throttleOption: 'category'],
+		parameters([
+			string(defaultValue: '1', description: 'debian package revision tag', name: 'TAGREV', trim: true),
+			choice(choices: ['all', 'cosmic', 'bionic', 'xenial'], description: 'Ubuntu version to build for', name: 'dists'),
+			choice(choices: ['auto', 'wsnipex-test', 'nightly', 'unstable', 'stable'], description: 'PPA to use', name: 'PPA'),
+			booleanParam(defaultValue: false, description: 'Force upload to PPA', name: 'force_ppa_upload')
+		])
+	])
+
 	def PLATFORMS_VALID = [
 		'android-armv7': 'android',
 		'android-aarch64': 'android-arm64-v8a',
 		'ios-armv7': 'ios',
 		'ios-aarch64': 'ios',
 		'osx-x86_64': 'osx64',
-		'ubuntu-ppa': 'linux',
 		'windows-i686': 'windows/win32',
 		'windows-x86_64': 'windows/x64'
 	]
@@ -41,16 +45,17 @@ def buildPlugin(Map addonParams = [:])
 		'Leia': 'unstable'
 	]
 
+
 	def platforms = addonParams.containsKey('platforms') && addonParams.platforms.metaClass.respondsTo('each') && addonParams.platforms.every{ p -> p in PLATFORMS_VALID } ? addonParams.platforms : PLATFORMS_VALID.keySet()
 	def version = addonParams.containsKey('version') && addonParams.version in VERSIONS_VALID ? addonParams.version : VERSIONS_VALID.keySet()[0]
 	def addon = env.JOB_NAME.tokenize('/')[1]
 	def dists = params.dists == "all" ? ["bionic", "xenial", "cosmic"] : [params.dists]
 	def ppa = params.PPA == "auto" ? PPAS_VALID[PPA_VERSION_MAP[version]] : PPAS_VALID[params.PPA]
 	def packageversion = ""
+
 	Map tasks = [failFast: false]
 
 	env.Configuration = 'Release'
-
 
 	for (int i = 0; i < platforms.size(); ++i)
 	{
@@ -63,6 +68,7 @@ def buildPlugin(Map addonParams = [:])
 			ThrottleJobProperty.fetchDescriptor().getCategories().add(new ThrottleJobProperty.ThrottleCategory(category, 1, 0, null));
 			ThrottleJobProperty.fetchDescriptor().save()
 		}
+
 		tasks[platform] = {
 			throttle(["binary-addons/${platform}-${version}"])
 			{
@@ -76,7 +82,7 @@ def buildPlugin(Map addonParams = [:])
 							checkout([
 								changelog: false,
 								$class: 'GitSCM',
-								branches: [[name: "* /${version}"]],
+								branches: [[name: "*/${version}"]],
 								doGenerateSubmoduleConfigurations: false,
 								extensions: [[$class: 'CloneOption', 'honorRefspec': true, 'noTags': true, 'reference': "${pwd}/../../kodi"]],
 								userRemoteConfigs: [[refspec: "+refs/heads/${version}:refs/remotes/origin/${version}", url: 'https://github.com/xbmc/xbmc.git']]
@@ -130,7 +136,7 @@ def buildPlugin(Map addonParams = [:])
 							dir("tools/depends/target/binary-addons")
 							{
 								if (isUnix())
-									sh "make -j $BUILDTHREADS ADDONS='${addon}' ADDONS_DEFINITION_DIR=`pwd`/addons ADDON_SRC_PREFIX=`pwd` EXTRA_CMAKE_ARGS=\"-DPACKAGE_DIR=`pwd`/../../../../cmake/addons/build/zips\" PACKAGE=1"
+									sh "make -j $BUILDTHREADS ADDONS='${addon}' ADDONS_DEFINITION_DIR=`pwd`/addons ADDON_SRC_PREFIX=`pwd` EXTRA_CMAKE_ARGS=\"-DPACKAGE_ZIP=ON -DPACKAGE_DIR=`pwd`/../../../../cmake/addons/build/zips\" PACKAGE=1"
 							}
 
 							if (!isUnix())
@@ -152,7 +158,7 @@ def buildPlugin(Map addonParams = [:])
 
 						stage("deploy (${platform})")
 						{
-							if (env.TAG_NAME != null)
+							if (platform != 'ios-armv7' && platform != 'ios-aarch64' && env.TAG_NAME != null)
 							{
 								echo "Deploying: ${addon} ${env.TAG_NAME}"
 								versionFolder = VERSIONS_VALID[version]
@@ -215,7 +221,7 @@ exit \$PUBLISHED
 							}
 						}
 					}
-					
+
 					stage("build")
 					{
 						if (params.force_ppa_upload)
@@ -246,15 +252,15 @@ exit \$PUBLISHED
 
 					stage("deploy ubuntu-ppa")
 					{
-						//if (env.TAG_NAME != null)
-						//{
+						if (env.TAG_NAME != null)
+						{
 							def changespattern = 'kodi-' + addon.replace('.', '-') + "_${packageversion}-${params.TAGREV}*_source.changes"
 							echo "Uploading to launchpad: ${changespattern}"
 							sh "dput ${ppa} ${changespattern}"
-						//}
+						}
 					}
 				}
-  			}
+			}
 		}
 	}
 
