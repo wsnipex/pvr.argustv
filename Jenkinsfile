@@ -204,9 +204,13 @@ exit \$PUBLISHED
 			{
 				ws("workspace/binary-addons/kodi-ubuntu-ppa-${version}")
 				{
-					def dists = params.dists.tokenize(',')
-					def ppa = params.PPA == "auto" ? PPAS_VALID[PPA_VERSION_MAP[version]] : PPAS_VALID[params.PPA]
 					def packageversion
+					def dists = params.dists.tokenize(',')
+					def ppas = params.PPA == "auto" ? [PPAS_VALID[PPA_VERSION_MAP[version]]] : []
+					if (ppas.size() == 0)
+					{
+						params.PPA.tokenize(',').each{p -> ppas.add(PPAS_VALID[p])}
+					}
 
 					stage("clone")
 					{
@@ -257,8 +261,11 @@ exit \$PUBLISHED
 						{
 							def force = params.force_ppa_upload ? '-f' : ''
 							def changespattern = 'kodi-' + addon.replace('.', '-') + "_${packageversion}-${params.TAGREV}*_source.changes"
-							echo "Uploading to launchpad: ${changespattern}"
-							sh "dput ${force} ${ppa} ${changespattern}"
+							for (ppa in ppas)
+							{
+								echo "Uploading ${changespattern} to ${ppa}"
+								sh "dput ${force} ${ppa} ${changespattern}"
+							}
 						}
 					}
 				}
