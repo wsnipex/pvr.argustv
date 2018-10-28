@@ -17,7 +17,7 @@ def buildPlugin(Map addonParams = [:])
 		parameters([
 			string(defaultValue: '1', description: 'debian package revision tag', name: 'TAGREV', trim: true),
 			/*choice(choices: ['all', 'cosmic', 'bionic', 'xenial'], description: 'Ubuntu version to build for', name: 'dists'),*/
-			extendedChoice('dists', 'cosmic,bionic,xenial', 3, 'Ubuntu version to build for'),
+			extendedChoice('dists', 'cosmic, bionic, xenial', 'cosmic, bionic, xenial', 'Ubuntu version to build for'),
 			choice(choices: ['auto', 'wsnipex-test', 'nightly', 'unstable', 'stable'], description: 'PPA to use', name: 'PPA'),
 			booleanParam(defaultValue: false, description: 'Force upload to PPA', name: 'force_ppa_upload')
 		])
@@ -276,7 +276,7 @@ exit \$PUBLISHED
 	parallel(tasks)
 }
 
-def extendedChoice(name, choices, size, desc)
+def extendedChoice(name, choices, default, desc)
 {
 	return new ExtendedChoiceParameterDefinition(
 	        name /* String name */,
@@ -289,7 +289,7 @@ def extendedChoice(name, choices, size, desc)
 	        null /* String bindings */,
 	        null /* String groovyClasspath */,
 	        null /* String propertyKey */,
-	        choices /* String defaultValue */,
+	        default /* String defaultValue */,
 	        null /* String defaultPropertyFile */,
 	        null /* String defaultGroovyScript */,
 	        null /* String defaultGroovyScriptFile */,
@@ -307,7 +307,7 @@ def extendedChoice(name, choices, size, desc)
 	        null /* String javascript */,
 	        false /* boolean saveJSONParameterToFile*/,
 	        false /* boolean quoteValue */,
-	        size, /* int visibleItemCount */,
+	        choices.tokenize(',').size(), /* int visibleItemCount */,
 	        desc /* String description */,
 	        null /* String multiSelectDelimiter */
 	)
