@@ -16,7 +16,7 @@ def buildPlugin(Map addonParams = [:])
 		[$class: 'ThrottleJobProperty', categories: [], limitOneJobWithMatchingParams: false, maxConcurrentPerNode: 0, maxConcurrentTotal: 1, paramsToUseForLimit: '', throttleEnabled: true, throttleOption: 'category'],
 		parameters([
 			string(defaultValue: '1', description: 'debian package revision tag', name: 'TAGREV', trim: true),
-			//choice(choices: ['all', 'cosmic', 'bionic', 'xenial'], description: 'Ubuntu version to build for', name: 'dists'),
+			/*choice(choices: ['all', 'cosmic', 'bionic', 'xenial'], description: 'Ubuntu version to build for', name: 'dists'),*/
 			extendedChoice("dists", ['cosmic', 'bionic', 'xenial'], 'Ubuntu version to build for'),
 			choice(choices: ['auto', 'wsnipex-test', 'nightly', 'unstable', 'stable'], description: 'PPA to use', name: 'PPA'),
 			booleanParam(defaultValue: false, description: 'Force upload to PPA', name: 'force_ppa_upload')
@@ -289,7 +289,7 @@ def extendedChoice(name, choices, desc)
 	        null /* String bindings */,
 	        null /* String groovyClasspath */,
 	        null /* String propertyKey */,
-	        UBUNTU_VERSIONS.join(",") /* String defaultValue */,
+	        choices.join(",") /* String defaultValue */,
 	        null /* String defaultPropertyFile */,
 	        null /* String defaultGroovyScript */,
 	        null /* String defaultGroovyScriptFile */,
