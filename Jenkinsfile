@@ -17,7 +17,7 @@ def buildPlugin(Map addonParams = [:])
 		parameters([
 			string(defaultValue: '1', description: 'debian package revision tag', name: 'TAGREV', trim: true),
 			/*choice(choices: ['all', 'cosmic', 'bionic', 'xenial'], description: 'Ubuntu version to build for', name: 'dists'),*/
-			extendedChoice("dists", 'cosmic,bionic,xenial', 3, 'Ubuntu version to build for'),
+			extendedChoice('dists', 'cosmic,bionic,xenial', 3, 'Ubuntu version to build for'),
 			choice(choices: ['auto', 'wsnipex-test', 'nightly', 'unstable', 'stable'], description: 'PPA to use', name: 'PPA'),
 			booleanParam(defaultValue: false, description: 'Force upload to PPA', name: 'force_ppa_upload')
 		])
@@ -207,7 +207,7 @@ exit \$PUBLISHED
 				ws("workspace/binary-addons/kodi-ubuntu-ppa-${version}")
 				{
 					//def dists = params.dists == "all" ? ["bionic", "xenial", "cosmic"] : [params.dists]
-					def dists = params.dists
+					def dists = params.dists.tokenize(',')
 					def ppa = params.PPA == "auto" ? PPAS_VALID[PPA_VERSION_MAP[version]] : PPAS_VALID[params.PPA]
 					def packageversion
 
