@@ -276,7 +276,7 @@ exit \$PUBLISHED
 	parallel(tasks)
 }
 
-def extendedChoice(name, choices, default, desc)
+def extendedChoice(name, choices, defaultchoice, desc)
 {
 	return new ExtendedChoiceParameterDefinition(
 	        name /* String name */,
@@ -289,7 +289,7 @@ def extendedChoice(name, choices, default, desc)
 	        null /* String bindings */,
 	        null /* String groovyClasspath */,
 	        null /* String propertyKey */,
-	        default /* String defaultValue */,
+	        defaultchoice /* String defaultValue */,
 	        null /* String defaultPropertyFile */,
 	        null /* String defaultGroovyScript */,
 	        null /* String defaultGroovyScriptFile */,
