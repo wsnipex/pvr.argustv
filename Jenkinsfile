@@ -230,11 +230,6 @@ exit \$PUBLISHED
 
 					stage("build")
 					{
-						if (params.force_ppa_upload)
-						{
-							sh "rm -f kodi-*.changes kodi-*.build kodi-*.upload"
-						}
-
 						dir("${addon}")
 						{
 							echo "Ubuntu dists enabled: ${dists} - TAGREV: ${params.TAGREV} - PPA: ${params.PPA}"
@@ -258,11 +253,12 @@ exit \$PUBLISHED
 
 					stage("deploy ubuntu-ppa")
 					{
-						if (env.TAG_NAME != null)
+						if (env.TAG_NAME != null || params.force_ppa_upload)
 						{
+							def force = params.force_ppa_upload ? '-f' : ''
 							def changespattern = 'kodi-' + addon.replace('.', '-') + "_${packageversion}-${params.TAGREV}*_source.changes"
 							echo "Uploading to launchpad: ${changespattern}"
-							sh "dput ${ppa} ${changespattern}"
+							sh "dput ${force} ${ppa} ${changespattern}"
 						}
 					}
 				}
