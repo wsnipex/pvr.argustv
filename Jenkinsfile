@@ -1,47 +1,46 @@
 import hudson.plugins.throttleconcurrents.ThrottleJobProperty;
 import com.cwctravel.hudson.plugins.extended_choice_parameter.ExtendedChoiceParameterDefinition;
 
-
-def extendedChoice = new ExtendedChoiceParameterDefinition(
-	"dists" /* String name */,
-	ExtendedChoiceParameterDefinition.PARAMETER_TYPE_MULTI_SELECT /* String type */,
-	UBUNTU_VERSIONS.join(",") /* String value */,
-	null /* String projectName */,
-	null /* String propertyFile */, 
-	null /* String groovyScript */,
-	null /* String groovyScriptFile */, 
-	null /* String bindings */, 
-	null /* String groovyClasspath */, 
-	null /* String propertyKey */, 
-	UBUNTU_VERSIONS.join(",") /* String defaultValue */, 
-	null /* String defaultPropertyFile */,
-	null /* String defaultGroovyScript */, 
-	null /* String defaultGroovyScriptFile */, 
-	null /* String defaultBindings */, 
-	null /* String defaultGroovyClasspath */,
-	null /* String defaultPropertyKey */, 
-	null /* String descriptionPropertyValue */, 
-	null /* String descriptionPropertyFile */, 
-	null /* String descriptionGroovyScript */,
-	null /* String descriptionGroovyScriptFile */, 
-	null /* String descriptionBindings */, 
-	null /* String descriptionGroovyClasspath */, 
-	null /* String descriptionPropertyKey */,
-	null /* String javascriptFile */,
-	null /* String javascript */,
-	false /* boolean saveJSONParameterToFile*/,
-	false /* boolean quoteValue */,
-	UBUNTU_VERSIONS.size(), /* int visibleItemCount */,
-	"Ubuntu version to build for" /* String description */,
-	null /* String multiSelectDelimiter */
-)
-
 /**
  * Simple wrapper step for building a plugin
  */
 def buildPlugin(Map addonParams = [:])
 {
 	UBUNTU_VERSIONS = ["xenial", "bionic", "cosmic"]
+	def extendedChoice = new ExtendedChoiceParameterDefinition(
+	        "dists" /* String name */,
+	        ExtendedChoiceParameterDefinition.PARAMETER_TYPE_MULTI_SELECT /* String type */,
+	        UBUNTU_VERSIONS.join(",") /* String value */,
+	        null /* String projectName */,
+	        null /* String propertyFile */,
+	        null /* String groovyScript */,
+	        null /* String groovyScriptFile */,
+	        null /* String bindings */,
+	        null /* String groovyClasspath */,
+	        null /* String propertyKey */,
+	        UBUNTU_VERSIONS.join(",") /* String defaultValue */,
+	        null /* String defaultPropertyFile */,
+	        null /* String defaultGroovyScript */,
+	        null /* String defaultGroovyScriptFile */,
+	        null /* String defaultBindings */,
+	        null /* String defaultGroovyClasspath */,
+	        null /* String defaultPropertyKey */,
+	        null /* String descriptionPropertyValue */,
+	        null /* String descriptionPropertyFile */,
+	        null /* String descriptionGroovyScript */,
+	        null /* String descriptionGroovyScriptFile */,
+	        null /* String descriptionBindings */,
+	        null /* String descriptionGroovyClasspath */,
+	        null /* String descriptionPropertyKey */,
+	        null /* String javascriptFile */,
+	        null /* String javascript */,
+	        false /* boolean saveJSONParameterToFile*/,
+	        false /* boolean quoteValue */,
+	        UBUNTU_VERSIONS.size(), /* int visibleItemCount */,
+	        "Ubuntu version to build for" /* String description */,
+	        null /* String multiSelectDelimiter */
+	)
+
 
 	properties([
 		buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '5')),
