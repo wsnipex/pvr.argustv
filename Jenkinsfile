@@ -6,7 +6,7 @@ import com.cwctravel.hudson.plugins.extended_choice_parameter.ExtendedChoicePara
  */
 def buildPlugin(Map addonParams = [:])
 {
-	UBUNTU_VERSIONS = ["xenial", "bionic", "cosmic"]
+	def UBUNTU_VERSIONS = ["xenial", "bionic", "cosmic"]
 	def extendedChoice = new ExtendedChoiceParameterDefinition(
 	        "dists" /* String name */,
 	        ExtendedChoiceParameterDefinition.PARAMETER_TYPE_MULTI_SELECT /* String type */,
