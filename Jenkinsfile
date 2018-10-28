@@ -7,7 +7,28 @@ import com.cwctravel.hudson.plugins.extended_choice_parameter.ExtendedChoicePara
 def buildPlugin(Map addonParams = [:])
 {
 
-	def UBUNTU_DISTS = ['cosmic', 'bionic', 'xenial']
+	def PLATFORMS_VALID = [
+		'android-armv7': 'android',
+		'android-aarch64': 'android-arm64-v8a',
+		'ios-armv7': 'ios',
+		'ios-aarch64': 'ios',
+		'osx-x86_64': 'osx64',
+		'windows-i686': 'windows/win32',
+		'windows-x86_64': 'windows/x64'
+	]
+	def UBUNTU_DISTS = [
+		'cosmic',
+		'bionic',
+		'xenial'
+	]
+	def VERSIONS_VALID = [
+		'master': 'leia',
+		'Leia': 'leia'
+	]
+	def PPA_VERSION_MAP = [
+		'master': 'nightly',
+		'Leia': 'unstable'
+	]
 	def PPAS_VALID = [
 		'nightly': 'ppa:team-xbmc/xbmc-nightly',
 		'unstable': 'ppa:team-xbmc/unstable',
@@ -30,24 +51,6 @@ def buildPlugin(Map addonParams = [:])
 			booleanParam(defaultValue: false, description: 'Force upload to PPA', name: 'force_ppa_upload')
 		])
 	])
-
-	def PLATFORMS_VALID = [
-		'android-armv7': 'android',
-		'android-aarch64': 'android-arm64-v8a',
-		'ios-armv7': 'ios',
-		'ios-aarch64': 'ios',
-		'osx-x86_64': 'osx64',
-		'windows-i686': 'windows/win32',
-		'windows-x86_64': 'windows/x64'
-	]
-	def VERSIONS_VALID = [
-		'master': 'leia',
-		'Leia': 'leia'
-	]
-	def PPA_VERSION_MAP = [
-		'master': 'nightly',
-		'Leia': 'unstable'
-	]
 
 
 	def platforms = addonParams.containsKey('platforms') && addonParams.platforms.metaClass.respondsTo('each') && addonParams.platforms.every{ p -> p in PLATFORMS_VALID } ? addonParams.platforms : PLATFORMS_VALID.keySet()
