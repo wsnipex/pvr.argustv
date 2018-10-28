@@ -25,15 +25,15 @@ def buildPlugin(Map addonParams = [:])
 		'master': 'leia',
 		'Leia': 'leia'
 	]
-	def PPA_VERSION_MAP = [
-		'master': 'nightly',
-		'Leia': 'unstable'
-	]
 	def PPAS_VALID = [
 		'nightly': 'ppa:team-xbmc/xbmc-nightly',
 		'unstable': 'ppa:team-xbmc/unstable',
 		'stable': 'ppa:team-xbmc/ppa',
 		'wsnipex-test': 'ppa:wsnipex/xbmc-addons-test'
+	]
+	def PPA_VERSION_MAP = [
+		'master': 'nightly',
+		'Leia': 'unstable'
 	]
 
 	properties([
@@ -59,7 +59,7 @@ def buildPlugin(Map addonParams = [:])
 	Map tasks = [failFast: false]
 
 	env.Configuration = 'Release'
-/*
+
 	for (int i = 0; i < platforms.size(); ++i)
 	{
 		String platform = platforms[i]
@@ -86,7 +86,7 @@ def buildPlugin(Map addonParams = [:])
 							checkout([
 								changelog: false,
 								$class: 'GitSCM',
-								branches: [[name: "* /${version}"]],
+								branches: [[name: "*/${version}"]],
 								doGenerateSubmoduleConfigurations: false,
 								extensions: [[$class: 'CloneOption', 'honorRefspec': true, 'noTags': true, 'reference': "${pwd}/../../kodi"]],
 								userRemoteConfigs: [[refspec: "+refs/heads/${version}:refs/remotes/origin/${version}", url: 'https://github.com/xbmc/xbmc.git']]
@@ -198,7 +198,6 @@ exit \$PUBLISHED
 			}
 		}
 	}
-*/
 
 	tasks["ubuntu-ppa"] = {
 		throttle(["binary-addons/ubuntu-ppa-${version}"])
@@ -215,7 +214,7 @@ exit \$PUBLISHED
 						params.PPA.tokenize(',').each{p -> ppas.add(PPAS_VALID[p])}
 					}
 
-					stage("clone")
+					stage("clone ubuntu-ppa")
 					{
 						dir("${addon}")
 						{
@@ -235,8 +234,13 @@ exit \$PUBLISHED
 						}
 					}
 
-					stage("build")
+					stage("build ubuntu-ppa")
 					{
+                                                if (params.force_ppa_upload)
+                                                {
+                                                        sh "rm -f kodi-*.changes kodi-*.build kodi-*.upload"
+                                                }
+
 						dir("${addon}")
 						{
 							echo "Ubuntu dists enabled: ${dists} - TAGREV: ${params.TAGREV} - PPA: ${params.PPA}"
