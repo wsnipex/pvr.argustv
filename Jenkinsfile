@@ -54,7 +54,7 @@ def buildPlugin(Map addonParams = [:])
 			string(defaultValue: '1', description: 'debian package revision tag', name: 'TAGREV', trim: true),
 			choice(choices: ['all', 'cosmic', 'bionic', 'xenial'], description: 'Ubuntu version to build for', name: 'dists'),
 			//choice(choices: ['auto', 'wsnipex-test', 'nightly', 'unstable', 'stable'], description: 'PPA to use', name: 'PPA'),
-			extendedChoice(),
+			extendedChoice,
 			booleanParam(defaultValue: false, description: 'Force upload to PPA', name: 'force_ppa_upload')
 		])
 	])
