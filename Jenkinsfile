@@ -6,6 +6,15 @@ import com.cwctravel.hudson.plugins.extended_choice_parameter.ExtendedChoicePara
  */
 def buildPlugin(Map addonParams = [:])
 {
+
+	def UBUNTU_DISTS = ['cosmic', 'bionic', 'xenial']
+	def PPAS_VALID = [
+		'nightly': 'ppa:team-xbmc/xbmc-nightly',
+		'unstable': 'ppa:team-xbmc/unstable',
+		'stable': 'ppa:team-xbmc/ppa',
+		'wsnipex-test': 'ppa:wsnipex/xbmc-addons-test'
+	]
+
 	properties([
 		buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '5')),
 		disableConcurrentBuilds(),
@@ -17,8 +26,9 @@ def buildPlugin(Map addonParams = [:])
 		parameters([
 			string(defaultValue: '1', description: 'debian package revision tag', name: 'TAGREV', trim: true),
 			/*choice(choices: ['all', 'cosmic', 'bionic', 'xenial'], description: 'Ubuntu version to build for', name: 'dists'),*/
-			extendedChoice('dists', 'cosmic, bionic, xenial', 'cosmic, bionic, xenial', 'Ubuntu version to build for'),
-			choice(choices: ['auto', 'wsnipex-test', 'nightly', 'unstable', 'stable'], description: 'PPA to use', name: 'PPA'),
+			extendedChoice('dists', UBUNTU_DISTS.join(','), UBUNTU_DISTS.join(','), 'Ubuntu version to build for'),
+			/*choice(choices: ['auto', 'wsnipex-test', 'nightly', 'unstable', 'stable'], description: 'PPA to use', name: 'PPA'),/*
+			extendedChoice('PPA', PPAS_VALID.keySet().join(',')+",auto", 'auto', 'PPA to use'),
 			booleanParam(defaultValue: false, description: 'Force upload to PPA', name: 'force_ppa_upload')
 		])
 	])
@@ -36,12 +46,6 @@ def buildPlugin(Map addonParams = [:])
 		'master': 'leia',
 		'Leia': 'leia'
 	]
-	def PPAS_VALID = [
-		'nightly': 'ppa:team-xbmc/xbmc-nightly',
-		'unstable': 'ppa:team-xbmc/unstable',
-		'stable': 'ppa:team-xbmc/ppa',
-		'wsnipex-test': 'ppa:wsnipex/xbmc-addons-test'
-	]
 	def PPA_VERSION_MAP = [
 		'master': 'nightly',
 		'Leia': 'unstable'
@@ -51,10 +55,6 @@ def buildPlugin(Map addonParams = [:])
 	def platforms = addonParams.containsKey('platforms') && addonParams.platforms.metaClass.respondsTo('each') && addonParams.platforms.every{ p -> p in PLATFORMS_VALID } ? addonParams.platforms : PLATFORMS_VALID.keySet()
 	def version = addonParams.containsKey('version') && addonParams.version in VERSIONS_VALID ? addonParams.version : VERSIONS_VALID.keySet()[0]
 	def addon = env.JOB_NAME.tokenize('/')[1]
-	//def dists = params.dists == "all" ? ["bionic", "xenial", "cosmic"] : [params.dists]
-	//def ppa = params.PPA == "auto" ? PPAS_VALID[PPA_VERSION_MAP[version]] : PPAS_VALID[params.PPA]
-	//def packageversion = ""
-
 	Map tasks = [failFast: false]
 
 	env.Configuration = 'Release'
@@ -206,7 +206,6 @@ exit \$PUBLISHED
 			{
 				ws("workspace/binary-addons/kodi-ubuntu-ppa-${version}")
 				{
-					//def dists = params.dists == "all" ? ["bionic", "xenial", "cosmic"] : [params.dists]
 					def dists = params.dists.tokenize(',')
 					def ppa = params.PPA == "auto" ? PPAS_VALID[PPA_VERSION_MAP[version]] : PPAS_VALID[params.PPA]
 					def packageversion
