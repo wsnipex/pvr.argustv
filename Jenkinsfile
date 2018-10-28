@@ -6,42 +6,6 @@ import com.cwctravel.hudson.plugins.extended_choice_parameter.ExtendedChoicePara
  */
 def buildPlugin(Map addonParams = [:])
 {
-	def UBUNTU_VERSIONS = ["xenial", "bionic", "cosmic"]
-	def extendedChoice = new ExtendedChoiceParameterDefinition(
-	        "dists" /* String name */,
-	        ExtendedChoiceParameterDefinition.PARAMETER_TYPE_MULTI_SELECT /* String type */,
-	        UBUNTU_VERSIONS.join(",") /* String value */,
-	        null /* String projectName */,
-	        null /* String propertyFile */,
-	        null /* String groovyScript */,
-	        null /* String groovyScriptFile */,
-	        null /* String bindings */,
-	        null /* String groovyClasspath */,
-	        null /* String propertyKey */,
-	        UBUNTU_VERSIONS.join(",") /* String defaultValue */,
-	        null /* String defaultPropertyFile */,
-	        null /* String defaultGroovyScript */,
-	        null /* String defaultGroovyScriptFile */,
-	        null /* String defaultBindings */,
-	        null /* String defaultGroovyClasspath */,
-	        null /* String defaultPropertyKey */,
-	        null /* String descriptionPropertyValue */,
-	        null /* String descriptionPropertyFile */,
-	        null /* String descriptionGroovyScript */,
-	        null /* String descriptionGroovyScriptFile */,
-	        null /* String descriptionBindings */,
-	        null /* String descriptionGroovyClasspath */,
-	        null /* String descriptionPropertyKey */,
-	        null /* String javascriptFile */,
-	        null /* String javascript */,
-	        false /* boolean saveJSONParameterToFile*/,
-	        false /* boolean quoteValue */,
-	        UBUNTU_VERSIONS.size(), /* int visibleItemCount */,
-	        "Ubuntu version to build for" /* String description */,
-	        null /* String multiSelectDelimiter */
-	)
-
-
 	properties([
 		buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '5')),
 		disableConcurrentBuilds(),
@@ -52,9 +16,9 @@ def buildPlugin(Map addonParams = [:])
 		[$class: 'ThrottleJobProperty', categories: [], limitOneJobWithMatchingParams: false, maxConcurrentPerNode: 0, maxConcurrentTotal: 1, paramsToUseForLimit: '', throttleEnabled: true, throttleOption: 'category'],
 		parameters([
 			string(defaultValue: '1', description: 'debian package revision tag', name: 'TAGREV', trim: true),
-			choice(choices: ['all', 'cosmic', 'bionic', 'xenial'], description: 'Ubuntu version to build for', name: 'dists'),
-			//choice(choices: ['auto', 'wsnipex-test', 'nightly', 'unstable', 'stable'], description: 'PPA to use', name: 'PPA'),
-			extendedChoice,
+			//choice(choices: ['all', 'cosmic', 'bionic', 'xenial'], description: 'Ubuntu version to build for', name: 'dists'),
+			extendedChoice("dists", ['cosmic', 'bionic', 'xenial'], 'Ubuntu version to build for'),
+			choice(choices: ['auto', 'wsnipex-test', 'nightly', 'unstable', 'stable'], description: 'PPA to use', name: 'PPA'),
 			booleanParam(defaultValue: false, description: 'Force upload to PPA', name: 'force_ppa_upload')
 		])
 	])
@@ -87,9 +51,9 @@ def buildPlugin(Map addonParams = [:])
 	def platforms = addonParams.containsKey('platforms') && addonParams.platforms.metaClass.respondsTo('each') && addonParams.platforms.every{ p -> p in PLATFORMS_VALID } ? addonParams.platforms : PLATFORMS_VALID.keySet()
 	def version = addonParams.containsKey('version') && addonParams.version in VERSIONS_VALID ? addonParams.version : VERSIONS_VALID.keySet()[0]
 	def addon = env.JOB_NAME.tokenize('/')[1]
-	def dists = params.dists == "all" ? ["bionic", "xenial", "cosmic"] : [params.dists]
-	def ppa = params.PPA == "auto" ? PPAS_VALID[PPA_VERSION_MAP[version]] : PPAS_VALID[params.PPA]
-	def packageversion = ""
+	//def dists = params.dists == "all" ? ["bionic", "xenial", "cosmic"] : [params.dists]
+	//def ppa = params.PPA == "auto" ? PPAS_VALID[PPA_VERSION_MAP[version]] : PPAS_VALID[params.PPA]
+	//def packageversion = ""
 
 	Map tasks = [failFast: false]
 
@@ -98,7 +62,6 @@ def buildPlugin(Map addonParams = [:])
 	for (int i = 0; i < platforms.size(); ++i)
 	{
 		String platform = platforms[i]
-		if (platform == 'ubuntu-ppa') continue
 
 		def category = "binary-addons/${platform}-${version}"
 		if (ThrottleJobProperty.fetchDescriptor().getCategories().every{ c -> c.getCategoryName() !=  category})
@@ -106,6 +69,8 @@ def buildPlugin(Map addonParams = [:])
 			ThrottleJobProperty.fetchDescriptor().getCategories().add(new ThrottleJobProperty.ThrottleCategory(category, 1, 0, null));
 			ThrottleJobProperty.fetchDescriptor().save()
 		}
+
+		if (platform == 'ubuntu-ppa') continue
 
 		tasks[platform] = {
 			throttle(["binary-addons/${platform}-${version}"])
@@ -241,6 +206,11 @@ exit \$PUBLISHED
 			{
 				ws("workspace/binary-addons/kodi-ubuntu-ppa-${version}")
 				{
+					//def dists = params.dists == "all" ? ["bionic", "xenial", "cosmic"] : [params.dists]
+					def dists = params.dists
+					def ppa = params.PPA == "auto" ? PPAS_VALID[PPA_VERSION_MAP[version]] : PPAS_VALID[params.PPA]
+					def packageversion
+
 					stage("clone")
 					{
 						dir("${addon}")
@@ -304,6 +274,43 @@ exit \$PUBLISHED
 	}
 
 	parallel(tasks)
+}
+
+def extendedChoice(name, choices, desc)
+{
+	return new ExtendedChoiceParameterDefinition(
+	        name /* String name */,
+	        ExtendedChoiceParameterDefinition.PARAMETER_TYPE_MULTI_SELECT /* String type */,
+	        choices.join(",") /* String value */,
+	        null /* String projectName */,
+	        null /* String propertyFile */,
+	        null /* String groovyScript */,
+	        null /* String groovyScriptFile */,
+	        null /* String bindings */,
+	        null /* String groovyClasspath */,
+	        null /* String propertyKey */,
+	        UBUNTU_VERSIONS.join(",") /* String defaultValue */,
+	        null /* String defaultPropertyFile */,
+	        null /* String defaultGroovyScript */,
+	        null /* String defaultGroovyScriptFile */,
+	        null /* String defaultBindings */,
+	        null /* String defaultGroovyClasspath */,
+	        null /* String defaultPropertyKey */,
+	        null /* String descriptionPropertyValue */,
+	        null /* String descriptionPropertyFile */,
+	        null /* String descriptionGroovyScript */,
+	        null /* String descriptionGroovyScriptFile */,
+	        null /* String descriptionBindings */,
+	        null /* String descriptionGroovyClasspath */,
+	        null /* String descriptionPropertyKey */,
+	        null /* String javascriptFile */,
+	        null /* String javascript */,
+	        false /* boolean saveJSONParameterToFile*/,
+	        false /* boolean quoteValue */,
+	        choices.size(), /* int visibleItemCount */,
+	        desc /* String description */,
+	        null /* String multiSelectDelimiter */
+	)
 }
 
 @NonCPS
