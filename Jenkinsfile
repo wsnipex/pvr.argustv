@@ -1,10 +1,48 @@
 import hudson.plugins.throttleconcurrents.ThrottleJobProperty;
+import com.cwctravel.hudson.plugins.extended_choice_parameter.ExtendedChoiceParameterDefinition;
+
+
+def extendedChoice = new ExtendedChoiceParameterDefinition(
+	"dists" /* String name */,
+	ExtendedChoiceParameterDefinition.PARAMETER_TYPE_MULTI_SELECT /* String type */,
+	UBUNTU_VERSIONS.join(",") /* String value */,
+	null /* String projectName */,
+	null /* String propertyFile */, 
+	null /* String groovyScript */,
+	null /* String groovyScriptFile */, 
+	null /* String bindings */, 
+	null /* String groovyClasspath */, 
+	null /* String propertyKey */, 
+	UBUNTU_VERSIONS.join(",") /* String defaultValue */, 
+	null /* String defaultPropertyFile */,
+	null /* String defaultGroovyScript */, 
+	null /* String defaultGroovyScriptFile */, 
+	null /* String defaultBindings */, 
+	null /* String defaultGroovyClasspath */,
+	null /* String defaultPropertyKey */, 
+	null /* String descriptionPropertyValue */, 
+	null /* String descriptionPropertyFile */, 
+	null /* String descriptionGroovyScript */,
+	null /* String descriptionGroovyScriptFile */, 
+	null /* String descriptionBindings */, 
+	null /* String descriptionGroovyClasspath */, 
+	null /* String descriptionPropertyKey */,
+	null /* String javascriptFile */,
+	null /* String javascript */,
+	false /* boolean saveJSONParameterToFile*/,
+	false /* boolean quoteValue */,
+	UBUNTU_VERSIONS.size(), /* int visibleItemCount */,
+	"Ubuntu version to build for" /* String description */,
+	null /* String multiSelectDelimiter */
+)
 
 /**
  * Simple wrapper step for building a plugin
  */
 def buildPlugin(Map addonParams = [:])
 {
+	UBUNTU_VERSIONS = ["xenial", "bionic", "cosmic"]
+
 	properties([
 		buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '5')),
 		disableConcurrentBuilds(),
@@ -16,7 +54,8 @@ def buildPlugin(Map addonParams = [:])
 		parameters([
 			string(defaultValue: '1', description: 'debian package revision tag', name: 'TAGREV', trim: true),
 			choice(choices: ['all', 'cosmic', 'bionic', 'xenial'], description: 'Ubuntu version to build for', name: 'dists'),
-			choice(choices: ['auto', 'wsnipex-test', 'nightly', 'unstable', 'stable'], description: 'PPA to use', name: 'PPA'),
+			//choice(choices: ['auto', 'wsnipex-test', 'nightly', 'unstable', 'stable'], description: 'PPA to use', name: 'PPA'),
+			extendedChoice(),
 			booleanParam(defaultValue: false, description: 'Force upload to PPA', name: 'force_ppa_upload')
 		])
 	])
@@ -56,7 +95,7 @@ def buildPlugin(Map addonParams = [:])
 	Map tasks = [failFast: false]
 
 	env.Configuration = 'Release'
-
+/*
 	for (int i = 0; i < platforms.size(); ++i)
 	{
 		String platform = platforms[i]
@@ -82,7 +121,7 @@ def buildPlugin(Map addonParams = [:])
 							checkout([
 								changelog: false,
 								$class: 'GitSCM',
-								branches: [[name: "*/${version}"]],
+								branches: [[name: "* /${version}"]],
 								doGenerateSubmoduleConfigurations: false,
 								extensions: [[$class: 'CloneOption', 'honorRefspec': true, 'noTags': true, 'reference': "${pwd}/../../kodi"]],
 								userRemoteConfigs: [[refspec: "+refs/heads/${version}:refs/remotes/origin/${version}", url: 'https://github.com/xbmc/xbmc.git']]
@@ -194,6 +233,7 @@ exit \$PUBLISHED
 			}
 		}
 	}
+*/
 
 	tasks["ubuntu-ppa"] = {
 		throttle(["binary-addons/ubuntu-ppa-${version}"])
