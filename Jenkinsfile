@@ -59,7 +59,7 @@ def buildPlugin(Map addonParams = [:])
 			extendedChoice('PPA', PPAS_VALID.keySet().join(',')+',auto', 'auto', 'PPA to use'),
 			string(defaultValue: '1', description: 'debian package revision tag', name: 'TAGREV', trim: true),
 			booleanParam(defaultValue: false, description: 'Force upload to PPA', name: 'force_ppa_upload')
-		])
+		]) : null
 	])
 
 	def deployPlatforms = params.deployPlatforms.tokenize(',')
