@@ -61,9 +61,9 @@ def buildPlugin(Map addonParams = [:])
 		])
 	])
 
+	def deployPlatforms = params.deployPlatforms.tokenize(',')
 	def platforms = addonParams.containsKey('platforms') && addonParams.platforms.metaClass.respondsTo('each') && addonParams.platforms.every{ p -> p in PLATFORMS_VALID } ? addonParams.platforms : PLATFORMS_VALID.keySet()
-	//def deploy = addonParams.containsKey('deploy') && addonParams.deploy.metaClass.respondsTo('each') ? addonParams.deploy.findAll{ d -> d in platforms && d in PLATFORMS_DEPLOY } : PLATFORMS_DEPLOY
-	def deploy = params.deployPlatforms.tokenize(',')
+	def deploy = addonParams.containsKey('deploy') && addonParams.deploy.metaClass.respondsTo('each') ? addonParams.deploy.findAll{ d -> d in platforms && d in PLATFORMS_DEPLOY && d in deployPlatforms } : PLATFORMS_DEPLOY
 	def version = addonParams.containsKey('version') && addonParams.version in VERSIONS_VALID ? addonParams.version : VERSIONS_VALID.keySet()[0]
 	def addon = env.JOB_NAME.tokenize('/')[1]
 	Map tasks = [failFast: false]
