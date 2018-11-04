@@ -53,13 +53,13 @@ def buildPlugin(Map addonParams = [:])
 		pipelineTriggers(env.BRANCH_NAME == 'master' ? [cron('@weekly')] : []),
 		[$class: 'RebuildSettings', autoRebuild: false, rebuildDisabled: true],
 		[$class: 'ThrottleJobProperty', categories: [], limitOneJobWithMatchingParams: false, maxConcurrentPerNode: 0, maxConcurrentTotal: 1, paramsToUseForLimit: '', throttleEnabled: true, throttleOption: 'category'],
-		parameters([
+		parameters( env.TAG_NAME != null ? [
 			extendedChoice('deployPlatforms', PLATFORMS_DEPLOY.join(','), PLATFORMS_DEPLOY.join(','), 'Platforms to deploy, deploy param from Jenkinsfile is always respected'),
 			extendedChoice('dists', UBUNTU_DISTS.join(','), UBUNTU_DISTS.join(','), 'Ubuntu version to build for'),
 			extendedChoice('PPA', PPAS_VALID.keySet().join(',')+',auto', 'auto', 'PPA to use'),
 			string(defaultValue: '1', description: 'debian package revision tag', name: 'TAGREV', trim: true),
 			booleanParam(defaultValue: false, description: 'Force upload to PPA', name: 'force_ppa_upload')
-		])
+		] : [])
 	])
 
 	def deployPlatforms = params.deployPlatforms.tokenize(',')
