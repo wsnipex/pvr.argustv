@@ -13,8 +13,16 @@ def buildPlugin(Map addonParams = [:])
 		'ios-armv7': 'ios',
 		'ios-aarch64': 'ios',
 		'osx-x86_64': 'osx64',
+		'ubuntu-ppa': 'linux',
 		'windows-i686': 'windows/win32',
 		'windows-x86_64': 'windows/x64'
+	]
+	def PLATFORMS_DEPLOY = [
+		'android-armv7',
+		'android-aarch64',
+		'osx-x86_64',
+		'windows-i686',
+		'windows-x86_64'
 	]
 	def UBUNTU_DISTS = [
 		'cosmic',
@@ -46,14 +54,16 @@ def buildPlugin(Map addonParams = [:])
 		[$class: 'ThrottleJobProperty', categories: [], limitOneJobWithMatchingParams: false, maxConcurrentPerNode: 0, maxConcurrentTotal: 1, paramsToUseForLimit: '', throttleEnabled: true, throttleOption: 'category'],
 		parameters([
 			string(defaultValue: '1', description: 'debian package revision tag', name: 'TAGREV', trim: true),
+			extendedChoice('deployPlatforms', PLATFORMS_DEPLOY.join(','), PLATFORMS_DEPLOY.join(','), 'Platforms to deploy'),
 			extendedChoice('dists', UBUNTU_DISTS.join(','), UBUNTU_DISTS.join(','), 'Ubuntu version to build for'),
 			extendedChoice('PPA', PPAS_VALID.keySet().join(',')+',auto', 'auto', 'PPA to use'),
 			booleanParam(defaultValue: false, description: 'Force upload to PPA', name: 'force_ppa_upload')
 		])
 	])
 
-
 	def platforms = addonParams.containsKey('platforms') && addonParams.platforms.metaClass.respondsTo('each') && addonParams.platforms.every{ p -> p in PLATFORMS_VALID } ? addonParams.platforms : PLATFORMS_VALID.keySet()
+	//def deploy = addonParams.containsKey('deploy') && addonParams.deploy.metaClass.respondsTo('each') ? addonParams.deploy.findAll{ d -> d in platforms && d in PLATFORMS_DEPLOY } : PLATFORMS_DEPLOY
+	def deploy = params.deployPlatforms.tokenize(',')
 	def version = addonParams.containsKey('version') && addonParams.version in VERSIONS_VALID ? addonParams.version : VERSIONS_VALID.keySet()[0]
 	def addon = env.JOB_NAME.tokenize('/')[1]
 	Map tasks = [failFast: false]
@@ -85,11 +95,13 @@ def buildPlugin(Map addonParams = [:])
 							pwd = pwd()
 							checkout([
 								changelog: false,
-								$class: 'GitSCM',
-								branches: [[name: "*/${version}"]],
-								doGenerateSubmoduleConfigurations: false,
-								extensions: [[$class: 'CloneOption', 'honorRefspec': true, 'noTags': true, 'reference': "${pwd}/../../kodi"]],
-								userRemoteConfigs: [[refspec: "+refs/heads/${version}:refs/remotes/origin/${version}", url: 'https://github.com/xbmc/xbmc.git']]
+								scm: [
+									$class: 'GitSCM',
+									branches: [[name: "*/${version}"]],
+									doGenerateSubmoduleConfigurations: false,
+									extensions: [[$class: 'CloneOption', honorRefspec: true, noTags: true, reference: "${pwd}/../../kodi"]],
+									userRemoteConfigs: [[refspec: "+refs/heads/${version}:refs/remotes/origin/${version}", url: 'https://github.com/xbmc/xbmc.git']]
+								]
 							])
 
 							if (isUnix())
@@ -162,7 +174,7 @@ def buildPlugin(Map addonParams = [:])
 
 						stage("deploy (${platform})")
 						{
-							if (platform != 'ios-armv7' && platform != 'ios-aarch64' && env.TAG_NAME != null)
+							if (platform in deploy && env.TAG_NAME != null)
 							{
 								echo "Deploying: ${addon} ${env.TAG_NAME}"
 								versionFolder = VERSIONS_VALID[version]
@@ -199,79 +211,82 @@ exit \$PUBLISHED
 		}
 	}
 
-	tasks["ubuntu-ppa"] = {
-		throttle(["binary-addons/ubuntu-ppa-${version}"])
-		{
-			node("linux")
+	if (platform == "ubuntu-ppa" && platform in deploy)
+	{
+		tasks[platform] = {
+			throttle(["binary-addons/${platform}-${version}"])
 			{
-				ws("workspace/binary-addons/kodi-ubuntu-ppa-${version}")
+				node(PLATFORMS_VALID[platform])
 				{
-					def packageversion
-					def dists = params.dists.tokenize(',')
-					def ppas = params.PPA == "auto" ? [PPAS_VALID[PPA_VERSION_MAP[version]]] : []
-					if (ppas.size() == 0)
+					ws("workspace/binary-addons/kodi-${platform}-${version}")
 					{
-						params.PPA.tokenize(',').each{p -> ppas.add(PPAS_VALID[p])}
-					}
-
-					stage("clone ubuntu-ppa")
-					{
-						dir("${addon}")
+						def packageversion
+						def dists = params.dists.tokenize(',')
+						def ppas = params.PPA == "auto" ? [PPAS_VALID[PPA_VERSION_MAP[version]]] : []
+						if (ppas.size() == 0)
 						{
-							if (env.BRANCH_NAME)
+							params.PPA.tokenize(',').each{p -> ppas.add(PPAS_VALID[p])}
+						}
+
+						stage("clone ${platform}")
+						{
+							dir("${addon}")
 							{
-								def scmVars = checkout(scm)
-								currentBuild.displayName = scmVars.GIT_BRANCH + '-' + scmVars.GIT_COMMIT.substring(0, 7)
-							}
-							else if ((env.BRANCH_NAME == null) && (repo))
-							{
-								git repo
-							}
-							else
-							{
-								error 'buildPlugin must be used as part of a Multibranch Pipeline *or* a `repo` argument must be provided'
+								if (env.BRANCH_NAME)
+								{
+									def scmVars = checkout(scm)
+									currentBuild.displayName = scmVars.GIT_BRANCH + '-' + scmVars.GIT_COMMIT.substring(0, 7)
+								}
+								else if ((env.BRANCH_NAME == null) && (repo))
+								{
+									git repo
+								}
+								else
+								{
+									error 'buildPlugin must be used as part of a Multibranch Pipeline *or* a `repo` argument must be provided'
+								}
 							}
 						}
-					}
 
-					stage("build ubuntu-ppa")
-					{
-                                                if (params.force_ppa_upload)
-                                                {
-                                                        sh "rm -f kodi-*.changes kodi-*.build kodi-*.upload"
-                                                }
-
-						dir("${addon}")
+						stage("build ${platform}")
 						{
-							echo "Ubuntu dists enabled: ${dists} - TAGREV: ${params.TAGREV} - PPA: ${params.PPA}"
-							def addonsxml = readFile "${addon}/addon.xml.in"
-							packageversion = getVersion(addonsxml)
-							echo "Detected PackageVersion: ${packageversion}"
-							def changelogin = readFile 'debian/changelog.in'
-							def origtarball = 'kodi-' + addon.replace('.', '-') + "_${packageversion}.orig.tar.gz"
-
-							sh "git archive --format=tar.gz -o ../${origtarball} HEAD"
-
-							for (dist in dists)
+							if (params.force_ppa_upload)
 							{
-								echo "Building debian-source package for ${dist}"
-								def changelog = changelogin.replace('#PACKAGEVERSION#', packageversion).replace('#TAGREV#', params.TAGREV).replace('#DIST#', dist)
-								writeFile file: "debian/changelog", text: "${changelog}"
-								sh "debuild -S -k'jenkins (jenkins build bot) <jenkins@kodi.tv>'"
+								sh "rm -f kodi-*.changes kodi-*.build kodi-*.upload"
+							}
+
+							dir("${addon}")
+							{
+								echo "Ubuntu dists enabled: ${dists} - TAGREV: ${params.TAGREV} - PPA: ${params.PPA}"
+								def addonsxml = readFile "${addon}/addon.xml.in"
+								packageversion = getVersion(addonsxml)
+								echo "Detected PackageVersion: ${packageversion}"
+								def changelogin = readFile 'debian/changelog.in'
+								def origtarball = 'kodi-' + addon.replace('.', '-') + "_${packageversion}.orig.tar.gz"
+
+								sh "git archive --format=tar.gz -o ../${origtarball} HEAD"
+
+								for (dist in dists)
+								{
+									echo "Building debian-source package for ${dist}"
+									def changelog = changelogin.replace('#PACKAGEVERSION#', packageversion).replace('#TAGREV#', params.TAGREV).replace('#DIST#', dist)
+									writeFile file: "debian/changelog", text: "${changelog}"
+									sh "debuild -S -k'jenkins (jenkins build bot) <jenkins@kodi.tv>'"
+								}
 							}
 						}
-					}
 
-					stage("deploy ubuntu-ppa")
-					{
-						if (env.TAG_NAME != null || params.force_ppa_upload)
+						stage("deploy ${platform}")
 						{
-							def force = params.force_ppa_upload ? '-f' : ''
-							def changespattern = 'kodi-' + addon.replace('.', '-') + "_${packageversion}-${params.TAGREV}*_source.changes"
-							for (ppa in ppas)
+							if (env.TAG_NAME != null || params.force_ppa_upload)
 							{
-								echo "Uploading ${changespattern} to ${ppa}"
-								sh "dput ${force} ${ppa} ${changespattern}"
+								def force = params.force_ppa_upload ? '-f' : ''
+								def changespattern = 'kodi-' + addon.replace('.', '-') + "_${packageversion}-${params.TAGREV}*_source.changes"
+								for (ppa in ppas)
+								{
+									echo "Uploading ${changespattern} to ${ppa}"
+									sh "dput ${force} ${ppa} ${changespattern}"
+								}
 							}
 						}
 					}
@@ -279,7 +294,6 @@ exit \$PUBLISHED
 			}
 		}
 	}
-
 	parallel(tasks)
 }
 
@@ -325,5 +339,6 @@ def getVersion(text) {
 	def matcher = text =~ /version=\"([\d.]+)\"/
         matcher ? matcher.getAt(1)[1] : null
 }
+
 
 buildPlugin()
